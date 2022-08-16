@@ -180,6 +180,6 @@ class Tree{
       }
 };
 
-RCPP_EXPOSED_CLASS(node)
-RCPP_EXPOSED_CLASS(Tree)
+RCPP_EXPOSED_CLASS(node);
+RCPP_EXPOSED_CLASS(Tree);
 
