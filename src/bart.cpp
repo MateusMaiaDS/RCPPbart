@@ -10,16 +10,60 @@ using namespace std;
 
 // Enable C++11 via this plugin (Rcpp 0.10.3 or later)
 // [[Rcpp::plugins(cpp11)]]
-// The line above (depends) it will make all the dependcies be included on the file
+// The line above (depends) it will make all the depe ndcies be included on the file
 using namespace Rcpp;
+
+
+// void grow_fixed(Tree &new_tree,
+//                 const Rcpp::NumericMatrix &x_train,
+//                 const Rcpp::NumericMatrix &x_test,
+//                 const Rcpp::NumericMatrix &xcut,
+//
+//                 int &n_min_size,
+//                 int &id_t, // Object to identify if the same tree was returned
+//                 int &verb_node_index // Store the node which was growned
+// ){
+//
+//   int n_obs_train = x_train.rows();
+//   int n_obs_test = x_test.rows();
+//
+//
+//   int n_terminals = xcut.rows();
+//   Rcpp::NumericVector new_node_train_index;
+//   Rcpp::NumericVector new_node_test_index;
+//
+//   for(int i = 0; i<10;i++){
+//   // Getting the new nodes
+//   node new_node(1,new_node_train_index,
+//                      new_node_test_index,
+//                      -1,-1,1,
+//                      0,xcut(i,0),0);
+//
+//   new_tree.list_node.push_back(new_node);
+//   }
+//
+//   // Adding the node observations in the
+//   for(int j = 0; j< 10; j++){
+//
+//     for(int i = 0 ; i< n_obs_train;i++){
+//
+//     if(x_train(i,0)<new_tree.list_node[j].var_split){
+//
+//     }
+//
+//     }
+// }
 
 
 void grow(Tree &new_tree,
           const Rcpp::NumericMatrix &x_train,
           const Rcpp::NumericMatrix &x_test,
+          const Rcpp::NumericMatrix &xcut,
+
           int &n_min_size,
           int &id_t, // Object to identify if the same tree was returned
-          int &verb_node_index // Store the node which was growned
+          int &verb_node_index, // Store the node which was growned
+          Rcpp::NumericVector &change_grow_rules
 ){
 
 
@@ -29,6 +73,7 @@ void grow(Tree &new_tree,
   int n_nodes = new_tree.list_node.size();
   int g_node, g_var, n_train, n_test;
   double g_rule;
+
 
   // Getting observations that are on the left and the ones that are in the right
   Rcpp::NumericVector new_left_train_index;
@@ -40,6 +85,11 @@ void grow(Tree &new_tree,
   Rcpp::NumericVector new_left_test_index;
   Rcpp::NumericVector new_right_test_index;
   Rcpp::NumericVector curr_obs_test; // Observations that belong to that terminal node
+
+
+  // Creating the new splits for the xcut
+  Rcpp::NumericVector new_left_xcut;
+  Rcpp::NumericVector new_right_xcut;
 
   // Getting terminal nodes
   vector<node> t_nodes = new_tree.getTerminals();
@@ -66,21 +116,31 @@ void grow(Tree &new_tree,
 
   // Selecting a split rule to choose
   // NEED TO SELECT ONLY SPLIT RULE FOR THAT TREE
-  Rcpp::NumericVector x_curr;
+  Rcpp::NumericVector x_curr(n_train);
+
   for(int i=0;i<n_train;i++){
-    x_curr.push_back( x_train(curr_obs_train[i],g_var));
+    x_curr(i) = x_train(curr_obs_train(i),g_var);
   }
+  // cout << " ERROR 1" << endl;
+  // cout << " Size x_curr " << x_curr.size() << endl;
 
   // Sampling the rule
-  g_rule = sample_double(x_curr,n_min_size);
+  g_rule = sample_rule(xcut(_,g_var),x_curr,n_min_size);
+  // g_rule = sample_double(xcut(_,g_var));
+  change_grow_rules.push_back(g_rule); // Adding this rule
+  if(g_rule == 0.0003){
+    id_t = 1;
+    return;
+  }
 
+  // cout << "ERROR 2" << endl;
 
   // Iterating over the train observations
   for(int i = 0; i<n_train; i++){
     if(x_train(curr_obs_train[i],g_var)<=g_rule){
-      new_left_train_index.push_back(curr_obs_train[i]);
+      new_left_train_index.push_back(curr_obs_train(i));
     } else {
-      new_right_train_index.push_back(curr_obs_train[i]);
+      new_right_train_index.push_back(curr_obs_train(i));
     }
   }
 
@@ -93,8 +153,13 @@ void grow(Tree &new_tree,
     }
   }
 
-  if((new_right_train_index.size()>=n_min_size) && (new_left_train_index.size()>=n_min_size)){
+  // cout << "Right node size " << new_right_train_index.size() << endl;
+  // cout << "Left node size " << new_left_train_index.size() << endl;
+  // cout << "That boolean is true " << ((new_right_train_index.size()>=n_min_size) & (new_left_train_index.size()>=n_min_size)) << endl;
 
+  if(((new_right_train_index.size()>=n_min_size) & (new_left_train_index.size()>=n_min_size))){
+
+    // cout << "YESSS" << endl;
     // Getting the new nodes
     node new_node_left(n_nodes,new_left_train_index,
                        new_left_test_index,
@@ -116,11 +181,6 @@ void grow(Tree &new_tree,
 
     // Storing the index of the node index
     verb_node_index = t_nodes[g_node].index;
-
-
-  } else {
-      // Do not chane the current tree
-      id_t = 1;
   }
 
   return;
@@ -148,7 +208,7 @@ void prune(Tree &new_tree, int& id_t, int& verb_node_index){
   vector<node> parent_left_right;
   for(int i=0;i<n_nodes;i++){
     if(!new_tree.list_node[i].isTerminal()){
-      if(new_tree.list_node[new_tree.list_node[i].left].isTerminal()){
+      if(new_tree.list_node[new_tree.list_node[i].left].isTerminal()){ // IS THE INDEX NOT THE POSITION!
         if(new_tree.list_node[new_tree.list_node[i].right].isTerminal()){
           parent_left_right.push_back(new_tree.list_node[i]); // Adding the parent
         }
@@ -203,9 +263,11 @@ void prune(Tree &new_tree, int& id_t, int& verb_node_index){
 void change(Tree &new_tree,
             const Rcpp::NumericMatrix x_train,
             const Rcpp::NumericMatrix x_test,
+            const Rcpp::NumericMatrix xcut,
             int n_min_size,
             int &id_t,
-            int &verb_node_index){
+            int &verb_node_index,
+            Rcpp::NumericVector change_grow_rules){
 
   // Declaring important values and variables
   int n_nodes = new_tree.list_node.size();
@@ -267,7 +329,16 @@ void change(Tree &new_tree,
   }
 
   // Getting the c_rule
-  c_rule = sample_double(x_curr,n_min_size);
+  c_rule = sample_rule(xcut(_,c_var),x_curr,n_min_size);
+  // c_rule = sample_double(xcut(_,c_var));
+
+
+  change_grow_rules.push_back(c_rule); // Adding this rule
+
+  if(c_rule == 0.0003){
+       id_t = 1;
+    return;
+  }
 
   // Iterating over the train observations
   for(int i = 0; i<n_train; i++){
@@ -289,7 +360,7 @@ void change(Tree &new_tree,
 
 
   // Verifying if is the correct min node size
-  if(new_right_train_index.size()>=n_min_size && new_left_train_index.size()>=n_min_size){
+  if((new_right_train_index.size()>=n_min_size) & (new_left_train_index.size()>=n_min_size)){
 
     // Returning the nodes that will be changed
     int left_index = new_tree.list_node[parent_left_right[c_node].index].left;
@@ -321,7 +392,6 @@ void change(Tree &new_tree,
 
 };
 
-
 double node_loglikelihood(Rcpp::NumericVector residuals,
                           node current_node,
                           double tau,
@@ -329,6 +399,26 @@ double node_loglikelihood(Rcpp::NumericVector residuals,
 
   // Decarling the quantities
   int n_size = current_node.obs_train.size();
+  Rcpp::NumericVector current_node_index = current_node.obs_train;
+  double sum_sq_r = 0 , sum_r = 0;
+
+  for(int i = 0;i<n_size;i++){
+    sum_sq_r+=residuals(current_node_index(i))*residuals(current_node_index(i));
+    sum_r+=residuals(current_node_index(i));
+
+  }
+
+  return -0.5*tau*sum_sq_r+0.5*((tau*tau)*(sum_r*sum_r))/(tau*n_size+tau_mu)-0.5*log(tau*n_size+tau_mu);
+}
+
+//[[Rcpp::export]]
+double node_loglikelihood_r(Rcpp::NumericVector residuals,
+                            Rcpp::NumericVector node_index,
+                          double tau,
+                          double tau_mu) {
+
+  // Decarling the quantities
+  int n_size = residuals.size();
   double sum_sq_r = 0 , sum_r = 0;
 
   for(int i = 0;i<n_size;i++){
@@ -402,8 +492,11 @@ Tree update_mu(Rcpp::NumericVector residuals,
       sum_residuals+=residuals(terminal_nodes[i].obs_train[j]);
     }
     mu_mean = (tau*sum_residuals)/(nj*tau+tau_mu);
+    // cout << "Number obs node terminal"<< nj << endl;
     mu_sd = sqrt(1/(nj*tau+tau_mu));
     curr_tree.list_node[terminal_nodes[i].index].mu = R::rnorm( mu_mean, mu_sd);
+    // curr_tree.list_node[terminal_nodes[i].index].mu = mu_mean;
+
 
   }
   // cout << "Mu mean: " << mu_mean << endl;
@@ -568,6 +661,7 @@ double log_transition_prob(Tree curr_tree,
 List bart(const Rcpp::NumericMatrix x_train,
           const Rcpp::NumericVector y,
           const Rcpp::NumericMatrix x_test,
+          const Rcpp::NumericMatrix xcut,
           int n_tree,
           int n_mcmc,
           int n_burn,
@@ -585,10 +679,15 @@ List bart(const Rcpp::NumericMatrix x_train,
   int post_counter = 0;
   int id_t ,verb_node_index; // Id_t: Boolean to verify if the same tree was generated
   // Verb_node_index: Explicit the node the was used;
-
+  Rcpp::NumericVector n_nodes;
   // Getting the number of observations
   int n_train = x_train.rows();
   int n_test = x_test.rows();
+  Rcpp:: NumericVector verb_list;
+  int id_t_c = 0;
+
+  // Creating a vector to store all split rules that are being proposed
+  Rcpp::NumericVector change_grow_rules;
 
   // Creating the variables
   int n_post = (n_mcmc-n_burn);
@@ -602,7 +701,6 @@ List bart(const Rcpp::NumericMatrix x_train,
   // Creating a vector of multiple trees
   vector<Tree> current_trees;
   for(int i = 0; i<n_tree;i++){
-    // current_trees.push_back(grow_true(new_tree,x_train,x_test,n_min_size,&id_t,&verb_node_index));
     current_trees.push_back(new_tree);
 
   }
@@ -650,27 +748,33 @@ List bart(const Rcpp::NumericMatrix x_train,
       // Change: 0.6 - 1.0
       // Swap: Not in this current implementation
       verb = R::runif(0,1);
-
       // Forcing the first trees to grow
       if(current_trees[t].list_node.size()==1 ){
         verb = 0.1;
       }
 
       // Proposing a new tree
-      if(verb<=0.3){
-        grow(new_tree, x_train,x_test, n_min_size,id_t,verb_node_index);
-      } else if ( verb <= 0.6){
+      // if(verb<=0.5){
+      //   grow(new_tree, x_train,x_test,xcut, n_min_size,id_t,verb_node_index,change_grow_rules);
+      // } else if ( verb>0.4 & verb <= 0.7){
+      //   prune(new_tree,id_t,verb_node_index);
+      //   // }
+      // } else if (verb>0.7 & verb <= 1){
+      //   change(new_tree,x_train,x_test,xcut,n_min_size,id_t,verb_node_index,change_grow_rules);
+      // }
+
+      if(verb<=0.5){
+        grow(new_tree, x_train,x_test,xcut, n_min_size,id_t,verb_node_index,change_grow_rules);
+      } else {
         prune(new_tree,id_t,verb_node_index);
-        // }
-      } else if (verb <= 1){
-        change(new_tree,x_train,x_test,n_min_size,id_t,verb_node_index);
       }
 
+
       // Calculating or not the likelihood (1 is for case where the trees are the same)
-      if(id_t == 0){
+      // if(id_t == 0){
 
         // No new tree is proposed (Jump log calculations)
-        if( (verb <=0.6) && (current_trees[t].list_node.size()==new_tree.list_node.size())){
+        if( (verb <=0.7) && (current_trees[t].list_node.size()==new_tree.list_node.size())){
           log_transition_prob_obj = 0;
         } else {
           log_transition_prob_obj = log_transition_prob(current_trees[t],new_tree,verb);
@@ -678,7 +782,9 @@ List bart(const Rcpp::NumericMatrix x_train,
         }
 
         // acceptance = tree_loglikelihood_verb(partial_residuals,new_tree,current_trees[t],verb,verb_node_index,tau,tau_mu) + tree_log_prior_verb(new_tree,current_trees[t],verb,alpha,beta)+ log_transition_prob_obj;
-        acceptance = tree_loglikelihood(partial_residuals,new_tree,tau,tau_mu) - tree_loglikelihood(partial_residuals,current_trees[t],tau,tau_mu)+ tree_log_prior_verb(new_tree,current_trees[t],verb,alpha,beta) + log_transition_prob_obj;
+        acceptance = tree_loglikelihood(partial_residuals,new_tree,tau,tau_mu) - tree_loglikelihood(partial_residuals,current_trees[t],tau,tau_mu) + tree_log_prior_verb(new_tree,current_trees[t],verb,alpha,beta) + log_transition_prob_obj;
+
+        // cout << "Prob. Acceptance" << exp(acceptance) << endl;
 
         // Testing if will acceptance or not
         if( (R::runif(0,1)) < exp(acceptance)){
@@ -687,10 +793,10 @@ List bart(const Rcpp::NumericMatrix x_train,
           current_trees[t] = new_tree;
         }
 
-      } // End the test likelihood calculating for same trees
-      // if(id_t==1){
-      //   cout << " IDENTITCAL TREES" << endl;
-      // }
+      // } // End the test likelihood calculating for same trees
+      if(id_t==1){
+        id_t_c++;
+      }
 
       // Generating new \mu values for the accepted (or not tree)
       current_trees[t] = update_mu(partial_residuals,current_trees[t],tau,tau_mu);
@@ -712,7 +818,7 @@ List bart(const Rcpp::NumericMatrix x_train,
     tau = update_tau_old(y,partial_pred,a_tau,d_tau);
     // tau = update_tau_old(y,partial_pred,a_tau,d_tau);
     // cout << "TAU: " << tau << endl;
-
+    n_nodes.push_back(current_trees[0].list_node.size());
 
     // Updating the posterior matrix
     if(i>=n_burn){
@@ -725,10 +831,13 @@ List bart(const Rcpp::NumericMatrix x_train,
 
   }
   cout << "Acceptance Ratio = " << acceptance_ratio/n_tree << endl;
+  cout << "Identitical Tree Counter= " << id_t_c << endl;
 
   return Rcpp::List::create(_["y_train_hat_post"] = y_train_hat_post,
                             _["y_test_hat_post"] = y_test_hat_post,
-                            _["tau_post"] = tau_post);
+                            _["tau_post"] = tau_post,
+                            _["n_nodes"] = n_nodes,
+                            _["change_grow_rules"] = change_grow_rules);
 
 }
 

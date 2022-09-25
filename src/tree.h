@@ -116,7 +116,7 @@ class Tree{
       vector<node> terminalNodes;
 
       for(int i = 0; i<list_node.size(); i++){
-        if(list_node[i].isTerminal()==1){
+        if(list_node[i].isTerminal()==1 ){ // Check this again, might remove the condition of being greater than 5
           terminalNodes.push_back(list_node[i]); // Adding the terminals to the list
         }
       }

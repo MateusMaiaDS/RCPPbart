@@ -13,6 +13,7 @@ r_bart <- function(x_train,
                    tau, mu,
                    alpha, beta,
                    a_tau,
+                   num_cut,
                    scale_boolean = TRUE,
                    K_bart = 2){
 
@@ -24,8 +25,17 @@ r_bart <- function(x_train,
   a_min <- min(y)
   b_max <- max(y)
 
+  # Cut matrix
+  numcut <- num_cut
+  xcut <- matrix(NA,ncol = ncol(x),nrow = numcut)
 
-  # Error of the matrix
+  # Getting possible x values
+  for(j in 1:ncol(x)){
+      xs <- quantile(x_train[ , j], type=7,
+                     probs=(0:(numcut+1))/(numcut+1))[-c(1, numcut+2)]
+
+      xcut[,j] <-xs
+  }# Error of the matrix
   if(is.null(colnames(x_train)) || is.null(colnames(x_test)) ) {
     stop("Insert a valid NAMED matrix")
   }
@@ -44,7 +54,7 @@ r_bart <- function(x_train,
     nsigma <- naive_sigma(x = x_train,y = y_scale)
     # print(nsigma)
 
-    d_tau <- rate_tau(x = x_train,y = y,prob = 0.9,shape = a_tau)
+    d_tau <- rate_tau(x = x_train,y = y_scale,prob = 0.9,shape = a_tau)
     #
   } else {
 
@@ -54,9 +64,10 @@ r_bart <- function(x_train,
     # Calculating \tau_{\mu} based on the scale of y
     # Need to change this value in case of non-scaling
     tau_mu <- (4 * n_tree * (K_bart^2))/((b_max-a_min)^2)
+    # tau_mu <- 0
 
     nsigma <- naive_sigma(x = x_train,y = y_scale)
-    print(nsigma)
+    # print(nsigma)
     d_tau <- rate_tau(x = x_train,y = y,prob = 0.9,shape = a_tau)
 
 
@@ -66,6 +77,7 @@ r_bart <- function(x_train,
   bart_obj <- bart(x_train = x_train,
                    y = y_scale,
                    x_test = x_test,
+                   xcut = xcut,
                    n_tree = n_tree,
                    n_mcmc = n_mcmc,
                    n_burn = n_burn,
@@ -89,7 +101,7 @@ r_bart <- function(x_train,
 
 
 
-  return(bart_obj)
+  return(list(bart_obj = bart_obj, numcut = xcut))
 }
 
 

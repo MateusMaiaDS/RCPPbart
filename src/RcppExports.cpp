@@ -10,15 +10,52 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// sample_int
+int sample_int(int n);
+RcppExport SEXP _RCPPbart_sample_int(SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_int(n));
+    return rcpp_result_gen;
+END_RCPP
+}
 // sample_double
-double sample_double(Rcpp::NumericVector vec, int n_min_size);
-RcppExport SEXP _RCPPbart_sample_double(SEXP vecSEXP, SEXP n_min_sizeSEXP) {
+double sample_double(Rcpp::NumericVector vec);
+RcppExport SEXP _RCPPbart_sample_double(SEXP vecSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type vec(vecSEXP);
-    Rcpp::traits::input_parameter< int >::type n_min_size(n_min_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(sample_double(vec, n_min_size));
+    rcpp_result_gen = Rcpp::wrap(sample_double(vec));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sample_rule
+double sample_rule(Rcpp::NumericVector x_cut_var, Rcpp:: NumericVector x_obs_var, int node_min_size);
+RcppExport SEXP _RCPPbart_sample_rule(SEXP x_cut_varSEXP, SEXP x_obs_varSEXP, SEXP node_min_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x_cut_var(x_cut_varSEXP);
+    Rcpp::traits::input_parameter< Rcpp:: NumericVector >::type x_obs_var(x_obs_varSEXP);
+    Rcpp::traits::input_parameter< int >::type node_min_size(node_min_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_rule(x_cut_var, x_obs_var, node_min_size));
+    return rcpp_result_gen;
+END_RCPP
+}
+// node_loglikelihood_r
+double node_loglikelihood_r(Rcpp::NumericVector residuals, Rcpp::NumericVector node_index, double tau, double tau_mu);
+RcppExport SEXP _RCPPbart_node_loglikelihood_r(SEXP residualsSEXP, SEXP node_indexSEXP, SEXP tauSEXP, SEXP tau_muSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type residuals(residualsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type node_index(node_indexSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_mu(tau_muSEXP);
+    rcpp_result_gen = Rcpp::wrap(node_loglikelihood_r(residuals, node_index, tau, tau_mu));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -36,14 +73,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // bart
-List bart(const Rcpp::NumericMatrix x_train, const Rcpp::NumericVector y, const Rcpp::NumericMatrix x_test, int n_tree, int n_mcmc, int n_burn, int n_min_size, double tau, double mu, double tau_mu, double naive_sigma, double alpha, double beta, double a_tau, double d_tau);
-RcppExport SEXP _RCPPbart_bart(SEXP x_trainSEXP, SEXP ySEXP, SEXP x_testSEXP, SEXP n_treeSEXP, SEXP n_mcmcSEXP, SEXP n_burnSEXP, SEXP n_min_sizeSEXP, SEXP tauSEXP, SEXP muSEXP, SEXP tau_muSEXP, SEXP naive_sigmaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP a_tauSEXP, SEXP d_tauSEXP) {
+List bart(const Rcpp::NumericMatrix x_train, const Rcpp::NumericVector y, const Rcpp::NumericMatrix x_test, const Rcpp::NumericMatrix xcut, int n_tree, int n_mcmc, int n_burn, int n_min_size, double tau, double mu, double tau_mu, double naive_sigma, double alpha, double beta, double a_tau, double d_tau);
+RcppExport SEXP _RCPPbart_bart(SEXP x_trainSEXP, SEXP ySEXP, SEXP x_testSEXP, SEXP xcutSEXP, SEXP n_treeSEXP, SEXP n_mcmcSEXP, SEXP n_burnSEXP, SEXP n_min_sizeSEXP, SEXP tauSEXP, SEXP muSEXP, SEXP tau_muSEXP, SEXP naive_sigmaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP a_tauSEXP, SEXP d_tauSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type x_train(x_trainSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector >::type y(ySEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type x_test(x_testSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type xcut(xcutSEXP);
     Rcpp::traits::input_parameter< int >::type n_tree(n_treeSEXP);
     Rcpp::traits::input_parameter< int >::type n_mcmc(n_mcmcSEXP);
     Rcpp::traits::input_parameter< int >::type n_burn(n_burnSEXP);
@@ -56,7 +94,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< double >::type a_tau(a_tauSEXP);
     Rcpp::traits::input_parameter< double >::type d_tau(d_tauSEXP);
-    rcpp_result_gen = Rcpp::wrap(bart(x_train, y, x_test, n_tree, n_mcmc, n_burn, n_min_size, tau, mu, tau_mu, naive_sigma, alpha, beta, a_tau, d_tau));
+    rcpp_result_gen = Rcpp::wrap(bart(x_train, y, x_test, xcut, n_tree, n_mcmc, n_burn, n_min_size, tau, mu, tau_mu, naive_sigma, alpha, beta, a_tau, d_tau));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -96,9 +134,12 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_RCPPbart_sample_double", (DL_FUNC) &_RCPPbart_sample_double, 2},
+    {"_RCPPbart_sample_int", (DL_FUNC) &_RCPPbart_sample_int, 1},
+    {"_RCPPbart_sample_double", (DL_FUNC) &_RCPPbart_sample_double, 1},
+    {"_RCPPbart_sample_rule", (DL_FUNC) &_RCPPbart_sample_rule, 3},
+    {"_RCPPbart_node_loglikelihood_r", (DL_FUNC) &_RCPPbart_node_loglikelihood_r, 4},
     {"_RCPPbart_dhcauchy", (DL_FUNC) &_RCPPbart_dhcauchy, 3},
-    {"_RCPPbart_bart", (DL_FUNC) &_RCPPbart_bart, 15},
+    {"_RCPPbart_bart", (DL_FUNC) &_RCPPbart_bart, 16},
     {"_RCPPbart_bolean_test", (DL_FUNC) &_RCPPbart_bolean_test, 2},
     {"_RCPPbart_new_vec", (DL_FUNC) &_RCPPbart_new_vec, 1},
     {"_RCPPbart_filling_vec", (DL_FUNC) &_RCPPbart_filling_vec, 1},
